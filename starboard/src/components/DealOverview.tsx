@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { fetchTenantNews, NewsArticle } from "../services/newsApi";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { pdfService, OcrResult } from "../services/pdfService";
+import { toast } from 'react-hot-toast';
 
 interface MetricCardProps {
   icon?: React.ReactNode;
@@ -317,15 +319,134 @@ const STATIC_NEWS_DATA: NewsArticle[] = [
   }
 ];
 
+interface OcrData {
+  documentInfo: {
+    dateUploaded: string;
+    documentType: string;
+    sourceFileName: string;
+  };
+  leaseInfo: {
+    leasePercentage: number;
+    tenantName: string;
+    capRatePercent: number | null;
+    leaseExpirationDate: string;
+    leaseTermRemainingYears: number;
+    rentEscalations: string;
+  };
+  offeringDetails: {
+    brokerageFirm: string;
+    guidancePriceUSD: number;
+    guidancePricePSF: number | null;
+    offeringType: string;
+    sellerName: string | null;
+  };
+  propertyInfo: {
+    address: {
+      city: string;
+      state: string;
+      street: string;
+      submarket: string;
+      zipCode: string | null;
+    };
+    propertyName: string;
+    propertySizeSF: number;
+    propertyType: string;
+    constructionStatus: string;
+    landAreaAcres: number;
+    yearBuilt: number;
+  };
+  brokerContacts: Array<{
+    email: string;
+    name: string;
+    phone: string;
+    title: string;
+  }>;
+  financingInfo: {
+    isFinancingAssumable: boolean;
+    assumableInterestRatePercent: number;
+    assumableLoanAmountUSD: number;
+    loanMaturityDate: string;
+  };
+  summaryPoints: {
+    investmentHighlights: string[];
+    riskFactors: string[];
+  };
+}
+
 function DealOverview() {
   const [activeTab, setActiveTab] = useState("overview");
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadResponse, setUploadResponse] = useState<any>(null);
+  const [showRawResponse, setShowRawResponse] = useState(false);
+  const [ocrData, setOcrData] = useState<OcrData | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const pdfContentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Remove the useEffect and fetching logic
   const newsArticles = STATIC_NEWS_DATA;
   const loading = false;
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPdf(true);
+    setUploadProgress(0);
+    setUploadResponse(null);
+    setOcrData(null);
+
+    try {
+      // Get the upload URL
+      setUploadProgress(10);
+      const urlResponse = await pdfService.getUploadUrl();
+      if (!urlResponse.success) {
+        throw new Error(urlResponse.error || 'Failed to get upload URL');
+      }
+      setUploadProgress(20);
+
+      // Upload the file
+      const { uploadUrl, fileName } = urlResponse.data;
+      const uploadResponse = await pdfService.uploadPdfToUrl(uploadUrl, file);
+      if (!uploadResponse.success) {
+        throw new Error(uploadResponse.error || 'Failed to upload file');
+      }
+      setUploadProgress(60);
+
+      // Only proceed with OCR if upload was successful
+      if (uploadResponse.success) {
+        const ocrResponse = await pdfService.processOcr(fileName);
+        setUploadProgress(100);
+        
+        // Store the raw response data
+        setUploadResponse({
+          upload: uploadResponse.rawResponse,
+          ocr: ocrResponse.rawResponse
+        });
+
+        // Set the parsed OCR data
+        if (ocrResponse.success && ocrResponse.rawResponse?.data) {
+          setOcrData(ocrResponse.rawResponse.data);
+        }
+
+        if (!ocrResponse.success) {
+          toast.error('OCR processing failed, but file was uploaded');
+        } else {
+          toast.success('File uploaded and processed successfully');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error in file upload process:', error);
+      toast.error(error.message || 'Failed to process file');
+    } finally {
+      setUploadingPdf(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Add PDF generation function
   const generatePDF = async () => {
@@ -373,6 +494,108 @@ function DealOverview() {
     } finally {
       setGeneratingPdf(false);
     }
+  };
+
+  // Render the property details section using OCR data
+  const renderPropertyDetails = () => {
+    if (!ocrData) return null;
+
+    const { propertyInfo, leaseInfo, financingInfo } = ocrData;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 py-6">
+        <EnhancedMetricCard
+          label="Property Size"
+          value={`${propertyInfo.propertySizeSF.toLocaleString()} SF`}
+          icon={<i className="ti ti-ruler-2" />}
+        />
+        <EnhancedMetricCard
+          label="Year Built"
+          value={propertyInfo.yearBuilt.toString()}
+          icon={<i className="ti ti-building" />}
+        />
+        <EnhancedMetricCard
+          label="Land Area"
+          value={`${propertyInfo.landAreaAcres} acres`}
+          icon={<i className="ti ti-map" />}
+        />
+        <EnhancedMetricCard
+          label="Lease Term"
+          value={`${leaseInfo.leaseTermRemainingYears} years`}
+          icon={<i className="ti ti-calendar" />}
+        />
+        <EnhancedMetricCard
+          label="Tenant"
+          value={leaseInfo.tenantName}
+          icon={<i className="ti ti-user" />}
+        />
+        <EnhancedMetricCard
+          label="Occupancy"
+          value={`${leaseInfo.leasePercentage}%`}
+          icon={<i className="ti ti-chart-pie" />}
+        />
+        {financingInfo.isFinancingAssumable && (
+          <>
+            <EnhancedMetricCard
+              label="Assumable Loan"
+              value={`$${(financingInfo.assumableLoanAmountUSD / 1000000).toFixed(1)}M`}
+              icon={<i className="ti ti-cash" />}
+            />
+            <EnhancedMetricCard
+              label="Interest Rate"
+              value={`${financingInfo.assumableInterestRatePercent}%`}
+              icon={<i className="ti ti-percentage" />}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // Render investment highlights
+  const renderInvestmentHighlights = () => {
+    if (!ocrData?.summaryPoints.investmentHighlights) return null;
+
+    return (
+      <div className="px-4 py-6">
+        <h3 className="text-xl font-semibold mb-4">Investment Highlights</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ocrData.summaryPoints.investmentHighlights.map((highlight, index) => (
+            <div key={index} className="flex items-start gap-2">
+              <i className="ti ti-check text-green-500 mt-1" />
+              <span>{highlight}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render broker contacts
+  const renderBrokerContacts = () => {
+    if (!ocrData?.brokerContacts) return null;
+
+    return (
+      <div className="px-4 py-6">
+        <h3 className="text-xl font-semibold mb-4">Broker Contacts</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ocrData.brokerContacts.map((broker, index) => (
+            <div key={index} className="p-4 bg-white rounded-lg shadow">
+              <h4 className="font-semibold">{broker.name}</h4>
+              <p className="text-sm text-gray-600">{broker.title}</p>
+              <div className="mt-2">
+                <a href={`mailto:${broker.email}`} className="text-blue-600 hover:underline text-sm block">
+                  {broker.email}
+                </a>
+                <a href={`tel:${broker.phone}`} className="text-blue-600 hover:underline text-sm block">
+                  {broker.phone}
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -427,6 +650,42 @@ function DealOverview() {
                 alt="Logo"
                 className="h-[46px] w-[74px]"
               />
+              {/* PDF Upload Button */}
+              <div className="relative">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploadingPdf}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPdf}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-white
+                             ${uploadingPdf ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} 
+                             transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0`}
+                >
+                  {uploadingPdf ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading... {uploadProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11 14.9861C11 15.5384 11.4477 15.9861 12 15.9861C12.5523 15.9861 13 15.5384 13 14.9861V7.82831L16.2428 11.0711C16.6333 11.4616 17.2665 11.4616 17.657 11.0711C18.0475 10.6806 18.0475 10.0474 17.657 9.65691L12.7071 4.70701C12.3166 4.31648 11.6834 4.31648 11.2929 4.70701L6.34315 9.65691C5.95263 10.0474 5.95263 10.6806 6.34315 11.0711C6.73368 11.4616 7.36684 11.4616 7.75737 11.0711L11 7.82831V14.9861Z" fill="currentColor"/>
+                        <path d="M4 14H6V18H18V14H20V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V14Z" fill="currentColor"/>
+                      </svg>
+                      Upload PDF
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </nav>
 
@@ -486,6 +745,34 @@ function DealOverview() {
           <div className="px-4 py-4">
             <NewsCarousel articles={newsArticles} loading={loading} />
           </div>
+
+          {/* OCR Data Display */}
+          {ocrData && (
+            <div className="space-y-6">
+              {renderPropertyDetails()}
+              {renderInvestmentHighlights()}
+              {renderBrokerContacts()}
+            </div>
+          )}
+
+          {/* Raw Response Toggle */}
+          {uploadResponse && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <button
+                onClick={() => setShowRawResponse(!showRawResponse)}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              >
+                <i className={`ti ti-chevron-${showRawResponse ? 'up' : 'down'}`} />
+                {showRawResponse ? 'Hide' : 'Show'} Raw Response
+              </button>
+              
+              {showRawResponse && (
+                <pre className="mt-4 whitespace-pre-wrap overflow-x-auto bg-white p-4 rounded border">
+                  {JSON.stringify(uploadResponse, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
 
           {/* Content for PDF */}
           <div ref={pdfContentRef} className="flex flex-col px-10 pt-6 pb-10 m-5 rounded-2xl shadow-xl bg-white border border-gray-100 backdrop-blur-sm backdrop-filter max-sm:px-4 max-sm:pt-4 max-sm:pb-6 max-sm:m-2.5 transition-all duration-300 hover:shadow-2xl break-inside-avoid">
@@ -1069,7 +1356,7 @@ function DealOverview() {
                   <div className="grid grid-cols-1 gap-6">
                     {[
                       {
-                        image: "https://github.com/yashpapa6969/starboard/blob/main/src/assets/1.png?raw=true",
+                        image: "https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg?cs=srgb&dl=pexels-binyaminmellish-186077.jpg&fm=jpg",
                         address: "1 Debaun Road",
                         details: {
                           Submarket: "Millstone, NJ",
@@ -1081,7 +1368,7 @@ function DealOverview() {
                         },
                       },
                       {
-                        image: "https://github.com/yashpapa6969/starboard/blob/main/src/assets/2.png?raw=true",
+                        image: "https://www.investopedia.com/thmb/bfHtdFUQrl7jJ_z-utfh8w1TMNA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/houses_and_land-5bfc3326c9e77c0051812eb3.jpg",
                         address: "39 Edgeboro Road",
                         details: {
                           Submarket: "Millstone, NJ",
