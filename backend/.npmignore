@@ -1,0 +1,12 @@
+tests/
+*.test.js
+.env
+.env.example
+README.md
+samconfig.toml
+template.yaml
+.aws-sam/
+node_modules/
+.git/
+.gitignore
+.npmignore 

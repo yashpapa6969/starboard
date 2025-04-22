@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { fetchTenantNews, NewsArticle } from "../services/newsApi";
@@ -502,48 +501,56 @@ function DealOverview() {
 
     const { propertyInfo, leaseInfo, financingInfo } = ocrData;
 
+    // Add null checks and default values
+    const propertySizeSF = propertyInfo?.propertySizeSF || 0;
+    const yearBuilt = propertyInfo?.yearBuilt || 'N/A';
+    const landAreaAcres = propertyInfo?.landAreaAcres || 0;
+    const leaseTermRemainingYears = leaseInfo?.leaseTermRemainingYears || 0;
+    const tenantName = leaseInfo?.tenantName || 'N/A';
+    const leasePercentage = leaseInfo?.leasePercentage || 0;
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 py-6">
         <EnhancedMetricCard
           label="Property Size"
-          value={`${propertyInfo.propertySizeSF.toLocaleString()} SF`}
+          value={`${propertySizeSF.toLocaleString()} SF`}
           icon={<i className="ti ti-ruler-2" />}
         />
         <EnhancedMetricCard
           label="Year Built"
-          value={propertyInfo.yearBuilt.toString()}
+          value={yearBuilt.toString()}
           icon={<i className="ti ti-building" />}
         />
         <EnhancedMetricCard
           label="Land Area"
-          value={`${propertyInfo.landAreaAcres} acres`}
+          value={`${landAreaAcres} acres`}
           icon={<i className="ti ti-map" />}
         />
         <EnhancedMetricCard
           label="Lease Term"
-          value={`${leaseInfo.leaseTermRemainingYears} years`}
+          value={`${leaseTermRemainingYears} years`}
           icon={<i className="ti ti-calendar" />}
         />
         <EnhancedMetricCard
           label="Tenant"
-          value={leaseInfo.tenantName}
+          value={tenantName}
           icon={<i className="ti ti-user" />}
         />
         <EnhancedMetricCard
           label="Occupancy"
-          value={`${leaseInfo.leasePercentage}%`}
+          value={`${leasePercentage}%`}
           icon={<i className="ti ti-chart-pie" />}
         />
-        {financingInfo.isFinancingAssumable && (
+        {financingInfo?.isFinancingAssumable && (
           <>
             <EnhancedMetricCard
               label="Assumable Loan"
-              value={`$${(financingInfo.assumableLoanAmountUSD / 1000000).toFixed(1)}M`}
+              value={`$${((financingInfo?.assumableLoanAmountUSD || 0) / 1000000).toFixed(1)}M`}
               icon={<i className="ti ti-cash" />}
             />
             <EnhancedMetricCard
               label="Interest Rate"
-              value={`${financingInfo.assumableInterestRatePercent}%`}
+              value={`${financingInfo?.assumableInterestRatePercent || 0}%`}
               icon={<i className="ti ti-percentage" />}
             />
           </>
@@ -597,6 +604,60 @@ function DealOverview() {
       </div>
     );
   };
+
+  // Add placeholder component for empty state
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 16.5L12 21L17 16.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 12V21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M20.5 17.5V19C20.5 20.1046 19.6046 21 18.5 21H5.5C4.39543 21 3.5 20.1046 3.5 19V17.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M16 8L12 4L8 8" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Deal Data Available</h3>
+      <p className="text-gray-500 mb-8 max-w-md">Upload a PDF document to analyze the deal details and view comprehensive insights.</p>
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 7V17M7 12L12 7L17 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Upload Deal Document
+      </button>
+    </div>
+  );
+
+  // Add upload progress component
+  const UploadProgress = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 mb-6 relative">
+            <svg className="animate-spin w-16 h-16 text-blue-600" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-blue-600 font-semibold">{uploadProgress}%</span>
+            </div>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing Document</h3>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+          </div>
+          <p className="text-gray-500 text-center">
+            {uploadProgress < 30 && "Analyzing document..."}
+            {uploadProgress >= 30 && uploadProgress < 60 && "Extracting data..."}
+            {uploadProgress >= 60 && uploadProgress < 90 && "Processing insights..."}
+            {uploadProgress >= 90 && "Almost done..."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200">
@@ -741,677 +802,686 @@ function DealOverview() {
 
           <div className="mx-0 my-2.5 h-px bg-zinc-200" />
 
-          {/* News Carousel - Only visible on page, not in PDF */}
-          <div className="px-4 py-4">
-            <NewsCarousel articles={newsArticles} loading={loading} />
-          </div>
+          {/* Show loading state during upload */}
+          {uploadingPdf && <UploadProgress />}
 
-          {/* OCR Data Display */}
+          {/* Show empty state when no data */}
+          {!ocrData && !uploadingPdf && <EmptyState />}
+
+          {/* Only show content when data is available */}
           {ocrData && (
-            <div className="space-y-6">
-              {renderPropertyDetails()}
-              {renderInvestmentHighlights()}
-              {renderBrokerContacts()}
-            </div>
-          )}
+            <>
+              {/* News Carousel */}
+              <div className="px-4 py-4">
+                <NewsCarousel articles={newsArticles} loading={loading} />
+              </div>
 
-          {/* Raw Response Toggle */}
-          {uploadResponse && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <button
-                onClick={() => setShowRawResponse(!showRawResponse)}
-                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-              >
-                <i className={`ti ti-chevron-${showRawResponse ? 'up' : 'down'}`} />
-                {showRawResponse ? 'Hide' : 'Show'} Raw Response
-              </button>
-              
-              {showRawResponse && (
-                <pre className="mt-4 whitespace-pre-wrap overflow-x-auto bg-white p-4 rounded border">
-                  {JSON.stringify(uploadResponse, null, 2)}
-                </pre>
+              {/* OCR Data Display */}
+              <div className="space-y-6">
+                {renderPropertyDetails()}
+                {renderInvestmentHighlights()}
+                {renderBrokerContacts()}
+              </div>
+
+              {/* Raw Response Toggle */}
+              {uploadResponse && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <button
+                    onClick={() => setShowRawResponse(!showRawResponse)}
+                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                  >
+                    <i className={`ti ti-chevron-${showRawResponse ? 'up' : 'down'}`} />
+                    {showRawResponse ? 'Hide' : 'Show'} Raw Response
+                  </button>
+                  
+                  {showRawResponse && (
+                    <pre className="mt-4 whitespace-pre-wrap overflow-x-auto bg-white p-4 rounded border">
+                      {JSON.stringify(uploadResponse, null, 2)}
+                    </pre>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Content for PDF */}
-          <div ref={pdfContentRef} className="flex flex-col px-10 pt-6 pb-10 m-5 rounded-2xl shadow-xl bg-white border border-gray-100 backdrop-blur-sm backdrop-filter max-sm:px-4 max-sm:pt-4 max-sm:pb-6 max-sm:m-2.5 transition-all duration-300 hover:shadow-2xl break-inside-avoid">
-            <div className="mx-0 my-2.5 h-px bg-zinc-200" />
+              {/* Content for PDF */}
+              <div ref={pdfContentRef} className="flex flex-col px-10 pt-6 pb-10 m-5 rounded-2xl shadow-xl bg-white border border-gray-100 backdrop-blur-sm backdrop-filter max-sm:px-4 max-sm:pt-4 max-sm:pb-6 max-sm:m-2.5 transition-all duration-300 hover:shadow-2xl break-inside-avoid">
+                <div className="mx-0 my-2.5 h-px bg-zinc-200" />
 
-            {/* Main Content */}
-            <div className="flex flex-col gap-4">
-              {/* Property Overview */}
-              <section className="flex gap-5 px-2.5 py-2 max-md:flex-col">
-                <div className="relative group">
-                  <img
-                    src="https://cdn.builder.io/api/v1/image/assets/TEMP/6025ad1229fd1938a28f6027e6a677ae6db97017?placeholderIfAbsent=true"
-                    alt="Property"
-                    className="rounded-2xl h-[187px] w-[333px] object-cover max-sm:w-full max-sm:h-auto"
-                  />
-                  <div className="absolute left-2/4 text-xs text-black bg-white/80 px-3 py-1 rounded-full -translate-x-2/4 bottom-[5px] group-hover:bg-white transition-colors duration-200">
-                    Click for Google Street View
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex justify-between px-8 py-4 max-sm:flex-col max-sm:gap-5">
-                    <div className="flex flex-col gap-1">
-                      <h2 className="text-xl font-semibold text-black">
-                        280 Richards, Brooklyn, NY
-                      </h2>
-                      <div className="text-sm text-zinc-500">
-                        Date Uploaded: 11/06/2024
+                {/* Main Content */}
+                <div className="flex flex-col gap-4">
+                  {/* Property Overview */}
+                  <section className="flex gap-5 px-2.5 py-2 max-md:flex-col">
+                    <div className="relative group">
+                      <img
+                        src="https://cdn.builder.io/api/v1/image/assets/TEMP/6025ad1229fd1938a28f6027e6a677ae6db97017?placeholderIfAbsent=true"
+                        alt="Property"
+                        className="rounded-2xl h-[187px] w-[333px] object-cover max-sm:w-full max-sm:h-auto"
+                      />
+                      <div className="absolute left-2/4 text-xs text-black bg-white/80 px-3 py-1 rounded-full -translate-x-2/4 bottom-[5px] group-hover:bg-white transition-colors duration-200">
+                        Click for Google Street View
                       </div>
-                      <div className="text-sm text-zinc-500">Warehouse</div>
                     </div>
-                    <div className="flex flex-col gap-2.5">
-                      <button className="px-8 py-2.5 text-sm font-medium rounded-lg cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-neutral-50 transition-all duration-200 hover:shadow-lg active:transform active:scale-95">
-                        Export to Excel
-                      </button>
-                      <button className="px-8 py-2 text-sm rounded-md cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-neutral-50 transition-colors duration-200">
-                        Generate PowerPoint
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Metrics Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 px-4 md:px-8 py-4">
-                    {[
-                      { label: "Seller", value: "Thor Equities" },
-                      { label: "Guidance Price", value: "$143,000,000" },
-                      { label: "Guidance Price PSF", value: "$23.92" },
-                      { label: "Cap Rate", value: "5.0%" },
-                      { label: "Property Size", value: "312,000 sqft" },
-                      { label: "Land Area", value: "16 acres" },
-                    ].map((metric, index) => (
-                      <div key={index} className="flex flex-col gap-1 items-end">
-                        <div className="text-sm text-zinc-500">
-                          {metric.label}
-                        </div>
-                        <div className="text-sm font-medium text-black">
-                          {metric.value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <div className="mx-0 my-2.5 h-px bg-zinc-200" />
-
-              {/* Deal Summary with Risk Factors - Enhanced UI */}
-              <div className="self-stretch h-auto relative px-6 pt-2">
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Deal Summary */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 pb-4">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M12 12L20 7.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M12 12V21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M12 12L4 7.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <div className="text-zinc-900 text-xl font-bold">Deal Summary</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm space-y-6">
-                      <div className="prose prose-blue max-w-none">
-                        <p className="text-zinc-700 leading-relaxed">
-                          280 Richards, fully leased to Amazon, aligns with HUSPP's
-                          strategy of acquiring prime logistics assets in Brooklyn's
-                          high-demand Red Hook submarket. With 13 years remaining on the
-                          lease and 3% annual rent escalations, it offers stable,
-                          long-term cash flow.
-                        </p>
-                      </div>
-
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-6 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
-                            </svg>
+                    <div className="flex-1">
+                      <div className="flex justify-between px-8 py-4 max-sm:flex-col max-sm:gap-5">
+                        <div className="flex flex-col gap-1">
+                          <h2 className="text-xl font-semibold text-black">
+                            280 Richards, Brooklyn, NY
+                          </h2>
+                          <div className="text-sm text-zinc-500">
+                            Date Uploaded: 11/06/2024
                           </div>
-                          <h4 className="text-red-800 text-lg font-semibold">Risk Factors</h4>
+                          <div className="text-sm text-zinc-500">Warehouse</div>
                         </div>
-                        <ul className="space-y-3">
-                          {[
-                            "Single-tenant exposure to Amazon",
-                            "Lease roll within 12 months",
-                            "Potential impact of congestion pricing on logistics operations"
-                          ].map((risk, index) => (
-                            <li key={index} className="flex items-center gap-3 text-red-700">
-                              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                              </svg>
-                              <span className="text-sm font-medium">{risk}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="flex flex-col gap-2.5">
+                          <button className="px-8 py-2.5 text-sm font-medium rounded-lg cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-neutral-50 transition-all duration-200 hover:shadow-lg active:transform active:scale-95">
+                            Export to Excel
+                          </button>
+                          <button className="px-8 py-2 text-sm rounded-md cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-neutral-50 transition-colors duration-200">
+                            Generate PowerPoint
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="prose prose-blue max-w-none">
-                        <p className="text-zinc-700 leading-relaxed">
-                          While single-tenant exposure is a risk,
-                          Amazon's investment-grade rating and renewal options enhance
-                          its resilience, making it a strong addition to HUSPP's
-                          portfolio.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Personalized Insights - Enhanced UI */}
-                  <div className="lg:w-[400px]">
-                    <div className="flex items-center gap-3 pb-4">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M16 17L21 12L16 7" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M21 12H9" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <div className="text-zinc-900 text-xl font-bold">Personalized Insights</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-white to-purple-50 rounded-xl p-6 border border-purple-100 shadow-sm space-y-6">
-                      <div className="space-y-4">
+                      {/* Metrics Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 px-4 md:px-8 py-4">
                         {[
-                          {
-                            date: "2019",
-                            title: "Previous Deal Review",
-                            content: "Jake Klein viewed this deal, but decided not to proceed due to lack of potential upside",
-                            link: "#",
-                            linkText: "View Previous Analysis"
-                          },
-                          {
-                            date: "Oct 19, 2021",
-                            title: "Similar Deal",
-                            content: "Your firm bid on 55 Bay St, Brooklyn, NY 11231, a larger site also occupied by Amazon 0.5 miles away. Brookfield won the deal for $45M",
-                            link: "#",
-                            linkText: "View Comparable"
-                          },
-                          {
-                            date: "Jan 19, 2025",
-                            title: "Market Research",
-                            content: "Tom, VP of Research, noted that congestion pricing has driven renewed demand for infill industrial in Brooklyn",
-                            link: "#",
-                            linkText: "Read Full Report"
-                          }
-                        ].map((insight, index) => (
-                          <div key={index} className="group">
-                            <div className="bg-white rounded-lg p-4 border border-purple-100 hover:border-purple-200 transition-all duration-300 shadow-sm hover:shadow-md">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                                  {insight.date}
-                                </span>
-                                <h4 className="text-sm font-semibold text-zinc-900">{insight.title}</h4>
-                              </div>
-                              <p className="text-sm text-zinc-600 mb-3">{insight.content}</p>
-                              <a 
-                                href={insight.link}
-                                className="inline-flex items-center gap-1 text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
-                              >
-                                {insight.linkText}
-                                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </a>
+                          { label: "Seller", value: "Thor Equities" },
+                          { label: "Guidance Price", value: "$143,000,000" },
+                          { label: "Guidance Price PSF", value: "$23.92" },
+                          { label: "Cap Rate", value: "5.0%" },
+                          { label: "Property Size", value: "312,000 sqft" },
+                          { label: "Land Area", value: "16 acres" },
+                        ].map((metric, index) => (
+                          <div key={index} className="flex flex-col gap-1 items-end">
+                            <div className="text-sm text-zinc-500">
+                              {metric.label}
+                            </div>
+                            <div className="text-sm font-medium text-black">
+                              {metric.value}
                             </div>
                           </div>
                         ))}
                       </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-purple-100">
-                        <button className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1">
-                          View All Insights
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                          </svg>
-                        </button>
-                        <button className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1">
-                          Add Insight
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  </section>
 
-              <div className="mx-0 my-2.5 h-px bg-zinc-200" />
+                  <div className="mx-0 my-2.5 h-px bg-zinc-200" />
 
-              {/* Market and Financial Metrics with Risk Indicators */}
-              <div className="w-full px-4 sm:px-6 mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-                  {/* Projected Financial Metrics */}
-                  <div className="w-full">
-                    <h3 className="text-zinc-500 text-base font-medium mb-4">Projected Financial Metrics</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
-                                  <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
-                                  <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="IRR"
-                        value="13.9%"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="16" x2="7" y2="11" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="16" x2="7" y2="6" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="16" x2="15" y2="16" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Equity Multiple"
-                        value="2.3x"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="3" width="20" height="5" rx="1" stroke="black" stroke-width="2"/>
-                                  <rect x="12" y="2" width="5" height="2" rx="1" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Return on Equity"
-                        value="18.5%"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
-                                  <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
-                                  <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Return on Cost"
-                        value="19.2%"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Key Assumptions with Risk Indicators */}
-                  <div className="w-full">
-                    <h3 className="text-zinc-500 text-base font-medium mb-4">Key Assumptions</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="5" width="3.5" height="3.5" rx="1" stroke="black" stroke-width="2"/>
-                                  <path d="M15 15L8 9" stroke="black" stroke-width="2"/>
-                                  <rect x="15" y="5" width="2" height="3.5" rx="1" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Exit Price"
-                        value="$195,000,000"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="5" y="5" width="3.5" height="3.5" rx="1" stroke="black" stroke-width="2"/>
-                                  <rect x="4" y="4" width="5" height="5" rx="1" stroke="black" stroke-width="2"/>
-                                  <rect x="15" y="15" width="5" height="5" rx="1" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Exit Cap Rate"
-                        value="5.0%"
-                        isRisk={true}
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Rental Growth"
-                        value="3.5%"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="2" width="20" height="20" rx="2" stroke="black" stroke-width="2"/>
-                                  <line x1="7.5" y1="6" x2="7.5" y2="8" stroke="black" stroke-width="1.5"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Hold Period"
-                        value="16 Years"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Market Analysis */}
-                  <div className="w-full">
-                    <h3 className="text-zinc-500 text-base font-medium mb-4">Market Analysis</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M3 6H6V18H3V6Z" stroke="black" stroke-width="2"/>
-                                  <path d="M10 6H13V14H10V6Z" stroke="black" stroke-width="2"/>
-                                  <path d="M17 2H20V18H17V2Z" stroke="black" stroke-width="2"/>
-                                  <line x1="10" y1="6" x2="10" y2="10" stroke="black" stroke-width="2"/>
-                                  <line x1="10" y1="10" x2="10" y2="14" stroke="black" stroke-width="2"/>
-                                  <line x1="10" y1="14" x2="10" y2="18" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Nearest Urban Center"
-                        value="Brooklyn, NY"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Population Growth Rate"
-                        value="1.2%"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="5" y="5" width="16" height="3.5" rx="1" stroke="black" stroke-width="2"/>
-                                  <circle cx="2" cy="9" r="1.5" stroke="black" stroke-width="1.5"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Median Household Income"
-                        value="$76,912"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <circle cx="9" cy="2" r="1.5" stroke="black" stroke-width="1.5"/>
-                                  <circle cx="16" cy="16" r="1.5" stroke="black" stroke-width="1.5"/>
-                                  <circle cx="2" cy="16" r="1.5" stroke="black" stroke-width="1.5"/>
-                                  <line x1="5" y1="12" x2="15" y2="12" stroke="black" stroke-width="1"/>
-                                  <line x1="12" y1="8" x2="12" y2="8" stroke="black" stroke-width="1"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Unemployment Rate"
-                        value="7.4%"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Lease Analysis */}
-                  <div className="w-full">
-                    <h3 className="text-zinc-500 text-base font-medium mb-4">Lease Analysis</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
-                                  <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
-                                  <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Rent PSF"
-                        value="$24.40"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="2" y="2" width="20" height="20" rx="2" stroke="black" stroke-width="2"/>
-                                  <line x1="12" y1="6" x2="12" y2="8" stroke="black" stroke-width="1"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="WALT"
-                        value="13 Yrs (Sep 37)"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <line x1="12" y1="5" x2="12" y2="15" stroke="black" stroke-width="2"/>
-                                  <line x1="5" y1="5" x2="12" y2="5" stroke="black" stroke-width="1.5"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Rent Escalations"
-                        value="3%"
-                      />
-                      <EnhancedMetricCard
-                        icon={
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
-                                  <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
-                                </svg>`,
-                            }}
-                          />
-                        }
-                        label="Mark-to-Market Opportunity"
-                        value="30%+"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mx-0 my-8 h-px bg-zinc-200" />
-
-              {/* Comparables Section - Fix layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                {/* Supply Pipeline */}
-                <div className="w-full">
-                  <h3 className="text-black text-xl font-bold mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#F59E0B" strokeWidth="2"/>
-                        <path d="M12 7V12L15 15" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                    Supply Pipeline
-                  </h3>
-                  <div className="space-y-6">
-                    {[
-                      {
-                        image:
-                          "https://cdn.builder.io/api/v1/image/assets/TEMP/16cbe66abcc8d2ba92fadcc955a51ce43bbfcd3b?placeholderIfAbsent=true",
-                        address: "640 Columbia",
-                        details: {
-                          Submarket: "Brooklyn",
-                          "Delivery Date": "Jun-25",
-                          Owner: "CBREI",
-                          SF: "336,350",
-                        },
-                      },
-                      {
-                        image:
-                          "https://cdn.builder.io/api/v1/image/assets/TEMP/12f4bc33609dbf419ad397db6178b547b0f57711?placeholderIfAbsent=true",
-                        address: "WB Mason",
-                        details: {
-                          Submarket: "Bronx",
-                          "Delivery Date": "May-25",
-                          Owner: "Link Logistics",
-                          SF: "150,000",
-                        },
-                      },
-                    ].map((property, index) => (
-                      <div
-                        key={index}
-                        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-amber-100 overflow-hidden group"
-                      >
-                        <div className="flex flex-col sm:flex-row">
-                          <div className="sm:w-1/3 relative overflow-hidden">
-                            <img
-                              src={property.image}
-                              alt={property.address}
-                              className="w-full h-40 sm:h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                  {/* Deal Summary with Risk Factors - Enhanced UI */}
+                  <div className="self-stretch h-auto relative px-6 pt-2">
+                    <div className="flex flex-col lg:flex-row gap-8">
+                      {/* Deal Summary */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 pb-4">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 12L20 7.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 12V21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 12L4 7.5" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           </div>
-                          <div className="sm:w-2/3 p-4">
-                            <h4 className="text-lg font-bold mb-3 text-amber-900">{property.address}</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {Object.entries(property.details).map(([key, value]) => (
-                                <div key={key} className="flex flex-col">
-                                  <span className="text-amber-800 text-xs font-bold uppercase tracking-wider">{key}</span>
-                                  <span className="text-zinc-700 text-sm font-medium">{value}</span>
-                                </div>
-                              ))}
+                          <div className="text-zinc-900 text-xl font-bold">Deal Summary</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm space-y-6">
+                          <div className="prose prose-blue max-w-none">
+                            <p className="text-zinc-700 leading-relaxed">
+                              280 Richards, fully leased to Amazon, aligns with HUSPP's
+                              strategy of acquiring prime logistics assets in Brooklyn's
+                              high-demand Red Hook submarket. With 13 years remaining on the
+                              lease and 3% annual rent escalations, it offers stable,
+                              long-term cash flow.
+                            </p>
+                          </div>
+
+                          <div className="bg-red-50 border border-red-200 rounded-xl p-6 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
+                                </svg>
+                              </div>
+                              <h4 className="text-red-800 text-lg font-semibold">Risk Factors</h4>
                             </div>
+                            <ul className="space-y-3">
+                              {[
+                                "Single-tenant exposure to Amazon",
+                                "Lease roll within 12 months",
+                                "Potential impact of congestion pricing on logistics operations"
+                              ].map((risk, index) => (
+                                <li key={index} className="flex items-center gap-3 text-red-700">
+                                  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="text-sm font-medium">{risk}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="prose prose-blue max-w-none">
+                            <p className="text-zinc-700 leading-relaxed">
+                              While single-tenant exposure is a risk,
+                              Amazon's investment-grade rating and renewal options enhance
+                              its resilience, making it a strong addition to HUSPP's
+                              portfolio.
+                            </p>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Sale Comparables */}
-                <div className="w-full">
-                  <h3 className="text-black text-xl font-bold mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2 12H4M8 12H6M10 12H12M16 12H14M18 12H20M22 12H20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M12 2V4M12 8V6M12 10V12M12 16V14M12 18V20M12 22V20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M15 3L13.5 5M10.5 9L9 7M7.5 10.5L4.5 12M7.5 13.5L4.5 12M10.5 15L9 17M15 21L13.5 19M18 17L16.5 15M19.5 13.5L16.5 12M19.5 10.5L16.5 12M18 7L16.5 9" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </span>
-                    Sale Comparables
-                  </h3>
-                  <div className="grid grid-cols-1 gap-6">
-                    {[
-                      {
-                        image: "https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg?cs=srgb&dl=pexels-binyaminmellish-186077.jpg&fm=jpg",
-                        address: "1 Debaun Road",
-                        details: {
-                          Submarket: "Millstone, NJ",
-                          SF: "132,930",
-                          Owner: "Cabot",
-                          Date: "Jun-24",
-                          PP: "$41,903,580",
-                          Tenant: "Berry Plastics"
-                        },
-                      },
-                      {
-                        image: "https://www.investopedia.com/thmb/bfHtdFUQrl7jJ_z-utfh8w1TMNA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/houses_and_land-5bfc3326c9e77c0051812eb3.jpg",
-                        address: "39 Edgeboro Road",
-                        details: {
-                          Submarket: "Millstone, NJ",
-                          SF: "513,240",
-                          Owner: "Blackstone",
-                          Date: "Oct-23",
-                          PP: "$165,776,520",
-                          Tenant: "FedEx"
-                        },
-                      },
-                    ].map((property, index) => (
-                      <div
-                        key={index}
-                        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-emerald-100 overflow-hidden group"
-                      >
-                        <div className="flex flex-col sm:flex-row">
-                          <div className="sm:w-1/3 relative overflow-hidden">
-                            <img
-                              src={property.image}
-                              alt={property.address}
-                              className="w-full h-40 sm:h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                      {/* Personalized Insights - Enhanced UI */}
+                      <div className="lg:w-[400px]">
+                        <div className="flex items-center gap-3 pb-4">
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M16 17L21 12L16 7" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M21 12H9" stroke="#9333EA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           </div>
-                          <div className="sm:w-2/3 p-4">
-                            <h4 className="text-lg font-bold mb-3 text-emerald-900">{property.address}</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {Object.entries(property.details).map(([key, value]) => (
-                                <div key={key} className="flex flex-col">
-                                  <span className="text-emerald-800 text-xs font-bold uppercase tracking-wider">{key}</span>
-                                  <span className="text-zinc-700 text-sm font-medium">{value}</span>
+                          <div className="text-zinc-900 text-xl font-bold">Personalized Insights</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-white to-purple-50 rounded-xl p-6 border border-purple-100 shadow-sm space-y-6">
+                          <div className="space-y-4">
+                            {[
+                              {
+                                date: "2019",
+                                title: "Previous Deal Review",
+                                content: "Jake Klein viewed this deal, but decided not to proceed due to lack of potential upside",
+                                link: "#",
+                                linkText: "View Previous Analysis"
+                              },
+                              {
+                                date: "Oct 19, 2021",
+                                title: "Similar Deal",
+                                content: "Your firm bid on 55 Bay St, Brooklyn, NY 11231, a larger site also occupied by Amazon 0.5 miles away. Brookfield won the deal for $45M",
+                                link: "#",
+                                linkText: "View Comparable"
+                              },
+                              {
+                                date: "Jan 19, 2025",
+                                title: "Market Research",
+                                content: "Tom, VP of Research, noted that congestion pricing has driven renewed demand for infill industrial in Brooklyn",
+                                link: "#",
+                                linkText: "Read Full Report"
+                              }
+                            ].map((insight, index) => (
+                              <div key={index} className="group">
+                                <div className="bg-white rounded-lg p-4 border border-purple-100 hover:border-purple-200 transition-all duration-300 shadow-sm hover:shadow-md">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                                      {insight.date}
+                                    </span>
+                                    <h4 className="text-sm font-semibold text-zinc-900">{insight.title}</h4>
+                                  </div>
+                                  <p className="text-sm text-zinc-600 mb-3">{insight.content}</p>
+                                  <a 
+                                    href={insight.link}
+                                    className="inline-flex items-center gap-1 text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                                  >
+                                    {insight.linkText}
+                                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  </a>
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-purple-100">
+                            <button className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1">
+                              View All Insights
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                              </svg>
+                            </button>
+                            <button className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1">
+                              Add Insight
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  </div>
+
+                  <div className="mx-0 my-2.5 h-px bg-zinc-200" />
+
+                  {/* Market and Financial Metrics with Risk Indicators */}
+                  <div className="w-full px-4 sm:px-6 mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                      {/* Projected Financial Metrics */}
+                      <div className="w-full">
+                        <h3 className="text-zinc-500 text-base font-medium mb-4">Projected Financial Metrics</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
+                                      <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
+                                      <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="IRR"
+                            value="13.9%"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="16" x2="7" y2="11" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="16" x2="7" y2="6" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="16" x2="15" y2="16" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Equity Multiple"
+                            value="2.3x"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="3" width="20" height="5" rx="1" stroke="black" stroke-width="2"/>
+                                      <rect x="12" y="2" width="5" height="2" rx="1" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Return on Equity"
+                            value="18.5%"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
+                                      <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
+                                      <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Return on Cost"
+                            value="19.2%"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Key Assumptions with Risk Indicators */}
+                      <div className="w-full">
+                        <h3 className="text-zinc-500 text-base font-medium mb-4">Key Assumptions</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="5" width="3.5" height="3.5" rx="1" stroke="black" stroke-width="2"/>
+                                      <path d="M15 15L8 9" stroke="black" stroke-width="2"/>
+                                      <rect x="15" y="5" width="2" height="3.5" rx="1" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Exit Price"
+                            value="$195,000,000"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="5" y="5" width="3.5" height="3.5" rx="1" stroke="black" stroke-width="2"/>
+                                      <rect x="4" y="4" width="5" height="5" rx="1" stroke="black" stroke-width="2"/>
+                                      <rect x="15" y="15" width="5" height="5" rx="1" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Exit Cap Rate"
+                            value="5.0%"
+                            isRisk={true}
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Rental Growth"
+                            value="3.5%"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="2" width="20" height="20" rx="2" stroke="black" stroke-width="2"/>
+                                      <line x1="7.5" y1="6" x2="7.5" y2="8" stroke="black" stroke-width="1.5"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Hold Period"
+                            value="16 Years"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Market Analysis */}
+                      <div className="w-full">
+                        <h3 className="text-zinc-500 text-base font-medium mb-4">Market Analysis</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M3 6H6V18H3V6Z" stroke="black" stroke-width="2"/>
+                                      <path d="M10 6H13V14H10V6Z" stroke="black" stroke-width="2"/>
+                                      <path d="M17 2H20V18H17V2Z" stroke="black" stroke-width="2"/>
+                                      <line x1="10" y1="6" x2="10" y2="10" stroke="black" stroke-width="2"/>
+                                      <line x1="10" y1="10" x2="10" y2="14" stroke="black" stroke-width="2"/>
+                                      <line x1="10" y1="14" x2="10" y2="18" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Nearest Urban Center"
+                            value="Brooklyn, NY"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Population Growth Rate"
+                            value="1.2%"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="5" y="5" width="16" height="3.5" rx="1" stroke="black" stroke-width="2"/>
+                                      <circle cx="2" cy="9" r="1.5" stroke="black" stroke-width="1.5"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Median Household Income"
+                            value="$76,912"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <circle cx="9" cy="2" r="1.5" stroke="black" stroke-width="1.5"/>
+                                      <circle cx="16" cy="16" r="1.5" stroke="black" stroke-width="1.5"/>
+                                      <circle cx="2" cy="16" r="1.5" stroke="black" stroke-width="1.5"/>
+                                      <line x1="5" y1="12" x2="15" y2="12" stroke="black" stroke-width="1"/>
+                                      <line x1="12" y1="8" x2="12" y2="8" stroke="black" stroke-width="1"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Unemployment Rate"
+                            value="7.4%"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Lease Analysis */}
+                      <div className="w-full">
+                        <h3 className="text-zinc-500 text-base font-medium mb-4">Lease Analysis</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="6" width="20" height="3" rx="1" stroke="black" stroke-width="2"/>
+                                      <circle cx="10" cy="10" r="1" stroke="black" stroke-width="2"/>
+                                      <path d="M6 12L10 12" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Rent PSF"
+                            value="$24.40"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="2" y="2" width="20" height="20" rx="2" stroke="black" stroke-width="2"/>
+                                      <line x1="12" y1="6" x2="12" y2="8" stroke="black" stroke-width="1"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="WALT"
+                            value="13 Yrs (Sep 37)"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <line x1="12" y1="5" x2="12" y2="15" stroke="black" stroke-width="2"/>
+                                      <line x1="5" y1="5" x2="12" y2="5" stroke="black" stroke-width="1.5"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Rent Escalations"
+                            value="3%"
+                          />
+                          <EnhancedMetricCard
+                            icon={
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="3" y="3" width="16" height="4" stroke="black" stroke-width="2"/>
+                                      <line x1="7" y1="9" x2="15" y2="9" stroke="black" stroke-width="2"/>
+                                    </svg>`,
+                                }}
+                              />
+                            }
+                            label="Mark-to-Market Opportunity"
+                            value="30%+"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mx-0 my-8 h-px bg-zinc-200" />
+
+                  {/* Comparables Section - Fix layout */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    {/* Supply Pipeline */}
+                    <div className="w-full">
+                      <h3 className="text-black text-xl font-bold mb-4 flex items-center">
+                        <span className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#F59E0B" strokeWidth="2"/>
+                            <path d="M12 7V12L15 15" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </span>
+                        Supply Pipeline
+                      </h3>
+                      <div className="space-y-6">
+                        {[
+                          {
+                            image:
+                              "https://cdn.builder.io/api/v1/image/assets/TEMP/16cbe66abcc8d2ba92fadcc955a51ce43bbfcd3b?placeholderIfAbsent=true",
+                            address: "640 Columbia",
+                            details: {
+                              Submarket: "Brooklyn",
+                              "Delivery Date": "Jun-25",
+                              Owner: "CBREI",
+                              SF: "336,350",
+                            },
+                          },
+                          {
+                            image:
+                              "https://cdn.builder.io/api/v1/image/assets/TEMP/12f4bc33609dbf419ad397db6178b547b0f57711?placeholderIfAbsent=true",
+                            address: "WB Mason",
+                            details: {
+                              Submarket: "Bronx",
+                              "Delivery Date": "May-25",
+                              Owner: "Link Logistics",
+                              SF: "150,000",
+                            },
+                          },
+                        ].map((property, index) => (
+                          <div
+                            key={index}
+                            className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-amber-100 overflow-hidden group"
+                          >
+                            <div className="flex flex-col sm:flex-row">
+                              <div className="sm:w-1/3 relative overflow-hidden">
+                                <img
+                                  src={property.image}
+                                  alt={property.address}
+                                  className="w-full h-40 sm:h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                              </div>
+                              <div className="sm:w-2/3 p-4">
+                                <h4 className="text-lg font-bold mb-3 text-amber-900">{property.address}</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {Object.entries(property.details).map(([key, value]) => (
+                                    <div key={key} className="flex flex-col">
+                                      <span className="text-amber-800 text-xs font-bold uppercase tracking-wider">{key}</span>
+                                      <span className="text-zinc-700 text-sm font-medium">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sale Comparables */}
+                    <div className="w-full">
+                      <h3 className="text-black text-xl font-bold mb-4 flex items-center">
+                        <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 12H4M8 12H6M10 12H12M16 12H14M18 12H20M22 12H20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M12 2V4M12 8V6M12 10V12M12 16V14M12 18V20M12 22V20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M15 3L13.5 5M10.5 9L9 7M7.5 10.5L4.5 12M7.5 13.5L4.5 12M10.5 15L9 17M15 21L13.5 19M18 17L16.5 15M19.5 13.5L16.5 12M19.5 10.5L16.5 12M18 7L16.5 9" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        </span>
+                        Sale Comparables
+                      </h3>
+                      <div className="grid grid-cols-1 gap-6">
+                        {[
+                          {
+                            image: "https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg?cs=srgb&dl=pexels-binyaminmellish-186077.jpg&fm=jpg",
+                            address: "1 Debaun Road",
+                            details: {
+                              Submarket: "Millstone, NJ",
+                              SF: "132,930",
+                              Owner: "Cabot",
+                              Date: "Jun-24",
+                              PP: "$41,903,580",
+                              Tenant: "Berry Plastics"
+                            },
+                          },
+                          {
+                            image: "https://www.investopedia.com/thmb/bfHtdFUQrl7jJ_z-utfh8w1TMNA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/houses_and_land-5bfc3326c9e77c0051812eb3.jpg",
+                            address: "39 Edgeboro Road",
+                            details: {
+                              Submarket: "Millstone, NJ",
+                              SF: "513,240",
+                              Owner: "Blackstone",
+                              Date: "Oct-23",
+                              PP: "$165,776,520",
+                              Tenant: "FedEx"
+                            },
+                          },
+                        ].map((property, index) => (
+                          <div
+                            key={index}
+                            className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-emerald-100 overflow-hidden group"
+                          >
+                            <div className="flex flex-col sm:flex-row">
+                              <div className="sm:w-1/3 relative overflow-hidden">
+                                <img
+                                  src={property.image}
+                                  alt={property.address}
+                                  className="w-full h-40 sm:h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                              </div>
+                              <div className="sm:w-2/3 p-4">
+                                <h4 className="text-lg font-bold mb-3 text-emerald-900">{property.address}</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {Object.entries(property.details).map(([key, value]) => (
+                                    <div key={key} className="flex flex-col">
+                                      <span className="text-emerald-800 text-xs font-bold uppercase tracking-wider">{key}</span>
+                                      <span className="text-zinc-700 text-sm font-medium">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </main>
     </div>

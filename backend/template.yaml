@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: SAM template for OCR Backend API
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+  S3Region:
+    Type: String
+    Default: us-east-1
+  S3Bucket:
+    Type: String
+  S3AccessKey:
+    Type: String
+    NoEcho: true
+  S3SecretKey:
+    Type: String
+    NoEcho: true
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        NODE_ENV: lambda
+        S3_REGION: !Ref S3Region
+        S3_BUCKET: !Ref S3Bucket
+        S3_ACCESS_KEY: !Ref S3AccessKey
+        S3_SECRET_KEY: !Ref S3SecretKey
+        GEMINI_API_KEY: !Ref GeminiApiKey
+    Architectures:
+      - x86_64
+
+Resources:
+  OcrFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: nodejs18.x
+    Properties:
+      Handler: lambda.handler
+      CodeUri: .
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: get
+        GenerateUploadUrl:
+          Type: Api
+          Properties:
+            Path: /generate-upload-url
+            Method: post
+        OcrEndpoint:
+          Type: Api
+          Properties:
+            Path: /v1/ocr
+            Method: post
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref S3Bucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/" 

@@ -1,0 +1,11 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "ss-new-2"
+resolve_s3 = true
+s3_prefix = "ss-new-2"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+disable_rollback = true
+parameter_overrides = "Environment=\"dev\" S3Region=\"us-east-1\" S3Bucket=\"sapphire-spark\""
+image_repositories = []
